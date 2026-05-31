@@ -267,32 +267,27 @@ void StartUartTask(void *argument)
 
     if (!g_running)
     {
-      /* 运行已暂停 */
-      char msg[] = "Running paused\r\n";
+      char msg[] = "已暂停\r\n";
       HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
     }
     else if (g_direction == 1 && g_delay_ms >= DELAY_INIT)
     {
-      /* 正在正向运行中 */
-      char msg[] = "Forward running.....\r\n";
+      char msg[] = "正在正向运行中.....\r\n";
       HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
     }
     else if (g_direction == -1 && g_delay_ms >= DELAY_INIT)
     {
-      /* 正在反向运行中 */
-      char msg[] = "Reverse running.....\r\n";
+      char msg[] = "正在反向运行中.....\r\n";
       HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
     }
     else if (g_direction == 1 && g_delay_ms < DELAY_INIT)
     {
-      /* 正向加速中 */
-      char msg[] = "Forward accelerating.....\r\n";
+      char msg[] = "正向加速中.....\r\n";
       HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
     }
     else if (g_direction == -1 && g_delay_ms < DELAY_INIT)
     {
-      /* 反向加速中 */
-      char msg[] = "Reverse accelerating.....\r\n";
+      char msg[] = "反向加速中.....\r\n";
       HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
     }
   }
