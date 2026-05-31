@@ -35,21 +35,6 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-/* LED状态表：每个元素包含三个LED的GPIO状态 */
-typedef struct {
-    GPIO_PinState led1;
-    GPIO_PinState led2;
-    GPIO_PinState led3;
-} LED_State;
-
-/* 流水灯状态序列：LED1 -> LED2 -> LED3 -> 全灭 -> 循环 */
-const LED_State led_sequence[] = {
-    {GPIO_PIN_SET,   GPIO_PIN_RESET, GPIO_PIN_RESET},  /* LED1亮 */
-    {GPIO_PIN_RESET, GPIO_PIN_SET,   GPIO_PIN_RESET},  /* LED2亮 */
-    {GPIO_PIN_RESET, GPIO_PIN_RESET, GPIO_PIN_SET},    /* LED3亮 */
-};
-
-#define LED_SEQUENCE_SIZE (sizeof(led_sequence) / sizeof(led_sequence[0]))
 
 /* USER CODE END PD */
 
