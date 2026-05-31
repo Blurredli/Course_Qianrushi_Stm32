@@ -77,7 +77,7 @@ osThreadId_t UartTaskHandle;
 const osThreadAttr_t UartTask_attributes = {
   .name = "UartTask",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityLow,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 
 /* Private function prototypes -----------------------------------------------*/

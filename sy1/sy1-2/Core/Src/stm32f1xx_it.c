@@ -227,12 +227,4 @@ void USART1_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-   if (GPIO_Pin == K2_Pin)
-   {
-       run = (run + 1) % 3;  /* 按键一次，切换到下一个灯亮，循环0->1->2->0 */
-   }
-}
-
 /* USER CODE END 1 */

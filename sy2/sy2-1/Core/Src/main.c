@@ -65,6 +65,9 @@ typedef struct {
     float freq_hz;      /* 频率(Hz) */
 } LED_Msg;
 
+/* 运行状态控制 */
+int8_t run = 1;            /* 运行状态 */
+
 /* 串口接收相关 */
 uint8_t rx_byte;           /* 单字节接收缓冲区 */
 char rx_buf[16];           /* 数字缓冲区 */
@@ -72,6 +75,97 @@ uint8_t rx_index = 0;      /* 缓冲区索引 */
 uint8_t rx_state = 0;      /* 接收状态：0=等待'L', 1=接收LED号, 2=等待'F', 3=接收频率 */
 uint8_t led_num_temp = 0;  /* 临时存储LED编号 */
 
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+  // 包结构: L<led>F<freq>\r\n 示例: L1F100\r\n 表示LED1频率100Hz
+  if (huart->Instance == USART1)
+  {
+    if (rx_state == 0)
+    {
+      /* 等待接收 'L' (LED命令起始) */
+      if (rx_byte == 'L')
+      {
+        rx_state = 1;
+        rx_index = 0;
+        memset(rx_buf, 0, sizeof(rx_buf));
+      }
+    }
+    else if (rx_state == 1)
+    {
+      /* 接收LED编号 (1, 2, 3) */
+      if (rx_byte >= '1' && rx_byte <= '3')
+      {
+        led_num_temp = rx_byte - '0';
+        rx_state = 2;  /* 等待接收 'F' */
+      }
+      else
+      {
+        /* 无效字符，重置 */
+        rx_state = 0;
+      }
+    }
+    else if (rx_state == 2)
+    {
+      /* 等待接收 'F' */
+      if (rx_byte == 'F')
+      {
+        rx_state = 3;
+        rx_index = 0;
+        memset(rx_buf, 0, sizeof(rx_buf));
+      }
+      else
+      {
+        /* 无效字符，重置 */
+        rx_state = 0;
+      }
+    }
+    else if (rx_state == 3)
+    {
+      /* 接收频率数字，直到收到回车或换行 */
+      if (rx_byte == '\r' || rx_byte == '\n')
+      {
+        /* 解析频率 (Hz) */
+        float freq_hz = atof(rx_buf);
+        if (freq_hz >= 1.0f && freq_hz <= 1000.0f)
+        {
+          /* 发送消息到队列 */
+          LED_Msg msg;
+          msg.led_num = led_num_temp;
+          msg.freq_hz = freq_hz;
+          osMessageQueuePut(Message_QueHandle, &msg, 0, 0);
+
+          char response[50];
+          sprintf(response, "LED%d Freq: %.2f Hz\r\n", led_num_temp, freq_hz);
+          HAL_UART_Transmit(&huart1, (uint8_t*)response, strlen(response), 100);
+        }
+        else
+        {
+          char msg[] = "Error: Freq must be 1~1000 Hz\r\n";
+          HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+        }
+        /* 重置状态 */
+        rx_state = 0;
+        rx_index = 0;
+      }
+      else if ((rx_byte >= '0' && rx_byte <= '9') || rx_byte == '.')
+      {
+        /* 收到数字或小数点字符 */
+        if (rx_index < 15)
+        {
+          rx_buf[rx_index++] = rx_byte;
+        }
+      }
+      else
+      {
+        /* 无效字符，重置 */
+        rx_state = 0;
+        rx_index = 0;
+      }
+    }
+    /* 继续接收下一字节 */
+    HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
+  }
+}
 /* USER CODE END 0 */
 
 /**
@@ -169,97 +263,6 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-  // 包结构: L<led>F<freq>\r\n 示例: L1F100\r\n 表示LED1频率100Hz
-  if (huart->Instance == USART1)
-  {
-    if (rx_state == 0)
-    {
-      /* 等待接收 'L' (LED命令起始) */
-      if (rx_byte == 'L')
-      {
-        rx_state = 1;
-        rx_index = 0;
-        memset(rx_buf, 0, sizeof(rx_buf));
-      }
-    }
-    else if (rx_state == 1)
-    {
-      /* 接收LED编号 (1, 2, 3) */
-      if (rx_byte >= '1' && rx_byte <= '3')
-      {
-        led_num_temp = rx_byte - '0';
-        rx_state = 2;  /* 等待接收 'F' */
-      }
-      else
-      {
-        /* 无效字符，重置 */
-        rx_state = 0;
-      }
-    }
-    else if (rx_state == 2)
-    {
-      /* 等待接收 'F' */
-      if (rx_byte == 'F')
-      {
-        rx_state = 3;
-        rx_index = 0;
-        memset(rx_buf, 0, sizeof(rx_buf));
-      }
-      else
-      {
-        /* 无效字符，重置 */
-        rx_state = 0;
-      }
-    }
-    else if (rx_state == 3)
-    {
-      /* 接收频率数字，直到收到回车或换行 */
-      if (rx_byte == '\r' || rx_byte == '\n')
-      {
-        /* 解析频率 (Hz) */
-        float freq_hz = atof(rx_buf);
-        if (freq_hz >= 1.0f && freq_hz <= 1000.0f)
-        {
-          /* 发送消息到队列 */
-          LED_Msg msg;
-          msg.led_num = led_num_temp;
-          msg.freq_hz = freq_hz;
-          osMessageQueuePut(Message_QueHandle, &msg, 0, 0);
-
-          char response[50];
-          sprintf(response, "LED%d Freq: %.2f Hz\r\n", led_num_temp, freq_hz);
-          HAL_UART_Transmit(&huart1, (uint8_t*)response, strlen(response), 100);
-        }
-        else
-        {
-          char msg[] = "Error: Freq must be 1~1000 Hz\r\n";
-          HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
-        }
-        /* 重置状态 */
-        rx_state = 0;
-        rx_index = 0;
-      }
-      else if (rx_byte >= '0' && rx_byte <= '9' || rx_byte == '.')
-      {
-        /* 收到数字或小数点字符 */
-        if (rx_index < 15)
-        {
-          rx_buf[rx_index++] = rx_byte;
-        }
-      }
-      else
-      {
-        /* 无效字符，重置 */
-        rx_state = 0;
-        rx_index = 0;
-      }
-    }
-    /* 继续接收下一字节 */
-    HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
-  }
-}
 /* USER CODE END 4 */
 
 /**

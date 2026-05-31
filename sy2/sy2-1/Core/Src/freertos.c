@@ -58,11 +58,8 @@ float led1_freq = 1.0f;
 float led2_freq = 1.0f;
 float led3_freq = 1.0f;
 
-/* 串口接收缓冲区 */
-uint8_t rx_byte;
-char rx_buf[16];
-uint8_t rx_index = 0;
-uint8_t rx_state = 0;  /* 0=等待'L', 1=接收LED号, 2=等待'F', 3=接收频率 */
+/* 外部变量声明（在main.c中定义） */
+
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
