@@ -47,7 +47,6 @@ const LED_State led_sequence[] = {
     {GPIO_PIN_SET,   GPIO_PIN_RESET, GPIO_PIN_RESET},  /* LED1亮 */
     {GPIO_PIN_RESET, GPIO_PIN_SET,   GPIO_PIN_RESET},  /* LED2亮 */
     {GPIO_PIN_RESET, GPIO_PIN_RESET, GPIO_PIN_SET},    /* LED3亮 */
-    {GPIO_PIN_RESET, GPIO_PIN_RESET, GPIO_PIN_RESET}   /* 全灭 */
 };
 
 #define LED_SEQUENCE_SIZE (sizeof(led_sequence) / sizeof(led_sequence[0]))
@@ -75,7 +74,7 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 /* 流水灯控制变量 */
 uint8_t current_step = 0;  /* 当前步骤索引 */
-int8_t direction = 1;      /* 方向：1为正向，-1为反向 */
+int8_t run = 1;            /* 运行状态 */
 uint32_t delay_ms = 500;   /* 延时时间，单位毫秒 */
 
 /* 串口接收相关 */
@@ -125,24 +124,28 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+    if (run)
+    {
+      /* LED1亮，LED2灭，LED3灭 */
+      HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
+      HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
+      HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
+      HAL_Delay(delay_ms);
 
-    /* USER CODE BEGIN 3 */
-    /* 使用查表法控制LED */
-    HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, led_sequence[current_step].led1);
-    HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, led_sequence[current_step].led2);
-    HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, led_sequence[current_step].led3);
+      /* LED1灭，LED2亮，LED3灭 */
+      HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+      HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
+      HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
+      HAL_Delay(delay_ms);
 
-    /* 更新下一步骤索引 */
-    current_step += direction;
-
-    /* 处理边界：循环到另一端 */
-    if (current_step >= LED_SEQUENCE_SIZE) {
-        current_step = 0;
-    } else if (current_step < 0) {
-        current_step = LED_SEQUENCE_SIZE - 1;
+      /* LED1灭，LED2灭，LED3亮 */
+      HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+      HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
+      HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
+      HAL_Delay(delay_ms);
     }
+    /* USER CODE BEGIN 3 */
 
-    HAL_Delay(delay_ms);
   }
   /* USER CODE END 3 */
 }

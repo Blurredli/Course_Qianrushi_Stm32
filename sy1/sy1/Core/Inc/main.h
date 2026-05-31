@@ -41,8 +41,8 @@ extern "C" {
 
 /* Exported constants --------------------------------------------------------*/
 /* USER CODE BEGIN EC */
-extern int8_t direction;  /* 流水灯方向：1为正向，-1为反向 */
-  extern uint8_t rx_data[2];  /* 串口接收缓冲区 */
+extern int8_t run;  /*  运行状态  */
+  extern char rx_buf[8];  /* 串口接收缓冲区 */
   extern uint32_t delay_ms;
 /* USER CODE END EC */
 

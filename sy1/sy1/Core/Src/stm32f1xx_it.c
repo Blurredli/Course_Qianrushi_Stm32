@@ -231,7 +231,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
    if (GPIO_Pin == K2_Pin) {
        /* 切换方向：1 -> -1, -1 -> 1 */
-       direction = -direction;
+       run = !run;  /* 切换运行状态 */
    }
 }
 
