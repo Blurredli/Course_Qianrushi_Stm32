@@ -41,7 +41,9 @@ extern "C" {
 
 /* Exported constants --------------------------------------------------------*/
 /* USER CODE BEGIN EC */
-
+extern int8_t direction;  /* 流水灯方向：1为正向，-1为反向 */
+  extern uint8_t rx_data[2];  /* 串口接收缓冲区 */
+  extern uint32_t delay_ms;
 /* USER CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/
@@ -57,6 +59,9 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define K2_Pin GPIO_PIN_2
+#define K2_GPIO_Port GPIOC
+#define K2_EXTI_IRQn EXTI2_IRQn
 #define LED3_Pin GPIO_PIN_3
 #define LED3_GPIO_Port GPIOD
 #define LED2_Pin GPIO_PIN_6

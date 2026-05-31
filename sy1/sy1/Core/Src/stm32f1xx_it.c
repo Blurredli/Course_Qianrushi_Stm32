@@ -22,6 +22,8 @@
 #include "stm32f1xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <string.h>
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -55,7 +57,7 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
-
+extern UART_HandleTypeDef huart1;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -198,6 +200,72 @@ void SysTick_Handler(void)
 /* please refer to the startup file (startup_stm32f1xx.s).                    */
 /******************************************************************************/
 
-/* USER CODE BEGIN 1 */
+/**
+  * @brief This function handles EXTI line2 interrupt.
+  */
+void EXTI2_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI2_IRQn 0 */
 
+  /* USER CODE END EXTI2_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(K2_Pin);
+  /* USER CODE BEGIN EXTI2_IRQn 1 */
+
+  /* USER CODE END EXTI2_IRQn 1 */
+}
+
+/**
+  * @brief This function handles USART1 global interrupt.
+  */
+void USART1_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART1_IRQn 0 */
+
+  /* USER CODE END USART1_IRQn 0 */
+  HAL_UART_IRQHandler(&huart1);
+  /* USER CODE BEGIN USART1_IRQn 1 */
+
+  /* USER CODE END USART1_IRQn 1 */
+}
+
+/* USER CODE BEGIN 1 */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+   if (GPIO_Pin == K2_Pin) {
+       /* 切换方向：1 -> -1, -1 -> 1 */
+       direction = -direction;
+   }
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    if (huart->Instance == USART1)
+    {
+        if (rx_data[0] == 'S')
+        {
+            HAL_UART_Receive_IT(&huart1, &rx_data[1], 1);
+        }
+        else if (rx_data[0] == '1' || rx_data[0] == '2' || rx_data[0] == '3')
+        {
+            switch (rx_data[0])
+            {
+                case '1': delay_ms = 1000; break;
+                case '2': delay_ms = 500; break;
+                case '3': delay_ms = 200; break;
+            }
+
+            char msg[50];
+            sprintf(msg, "Speed set: %lu Hz\r\n", 1000 / delay_ms);
+            HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+
+            rx_data[0] = 0;
+            rx_data[1] = 0;
+            HAL_UART_Receive_IT(&huart1, rx_data, 1);
+        }
+        else
+        {
+            HAL_UART_Receive_IT(&huart1, rx_data, 1);
+        }
+    }
+}
 /* USER CODE END 1 */

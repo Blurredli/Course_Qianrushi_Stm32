@@ -18,12 +18,19 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <string.h>
+#include <stdio.h>
 /* USER CODE END Includes */
+
+/* Private typedef -----------------------------------------------------------*/
+/* USER CODE BEGIN PTD */
+
+/* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
@@ -43,16 +50,6 @@ const LED_State led_sequence[] = {
 };
 
 #define LED_SEQUENCE_SIZE (sizeof(led_sequence) / sizeof(led_sequence[0]))
-
-/* USER CODE END PD */
-
-/* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN PTD */
-
-/* USER CODE END PTD */
-
-/* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN PD */
 
 /* USER CODE END PD */
 
@@ -79,6 +76,8 @@ void SystemClock_Config(void);
 uint8_t current_step = 0;  /* 当前步骤索引 */
 int8_t direction = 1;      /* 方向：1为正向，-1为反向 */
 uint32_t delay_ms = 500;   /* 延时时间，单位毫秒 */
+// 串口接收缓冲区
+uint8_t rx_data[2];
 
 /* USER CODE END 0 */
 
@@ -111,8 +110,10 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-
+  // 开启串口中断接收
+  HAL_UART_Receive_IT(&huart1, rx_data, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
