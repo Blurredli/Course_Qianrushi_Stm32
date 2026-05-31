@@ -116,7 +116,7 @@ int main(void)
   MX_GPIO_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
+  HAL_UART_Receive_IT(&huart1, &rx_byte, 1);    // 上电初始一次接收
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -196,7 +196,7 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
+{// 包结构"S"+""数字" 简单包结构示例：S100\r\n 表示频率100Hz
   if (huart->Instance == USART1)
   {
     if (rx_state == 0)
@@ -214,20 +214,19 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
       /* 接收数字，直到收到回车或换行 */
       if (rx_byte == '\r' || rx_byte == '\n')
       {
-        /* 解析数字 */
-        uint32_t ms = atoi(rx_buf);
-        if (ms >= 1 && ms <= 1000)
+        /* 解析频率 (Hz) */
+        float freq_hz = atof(rx_buf);
+        if (freq_hz >= 1.0f && freq_hz <= 1000.0f)
         {
-          delay_ms = ms;
-          /* 计算并回传频率 (Hz) */
-          float freq = 1000.0f / delay_ms;
+          /* 计算延时时间: delay_ms = 1000 / freq_hz */
+          delay_ms = (uint32_t)(1000.0f / freq_hz);
           char msg[50];
-          sprintf(msg, "Freq: %.2f Hz\r\n", freq);
+          sprintf(msg, "Freq: %.2f Hz\r\n", freq_hz);
           HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
         }
         else
         {
-          char msg[] = "Error: 1~1000 ms\r\n";
+          char msg[] = "Error: Freq must be 1~1000 Hz\r\n";
           HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
         }
         /* 重置状态 */
