@@ -231,7 +231,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
    if (GPIO_Pin == K2_Pin)
    {
-       run = !run;  /* 切换运行状态 */
+       run = (run + 1) % 3;  /* 按键一次，切换到下一个灯亮，循环0->1->2->0 */
    }
 }
 

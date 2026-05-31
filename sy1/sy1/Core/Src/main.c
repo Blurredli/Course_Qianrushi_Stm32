@@ -74,7 +74,7 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 /* 流水灯控制变量 */
 uint8_t current_step = 0;  /* 当前步骤索引 */
-int8_t run = 1;            /* 运行状态 */
+int8_t run = 0;            /* 运行状态 */
 uint32_t delay_ms = 500;   /* 延时时间，单位毫秒 */
 
 /* 串口接收相关 */
@@ -124,25 +124,28 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-    if (run)
+    switch (run)
     {
-      /* LED1亮，LED2灭，LED3灭 */
-      HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
-      HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
-      HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
-      HAL_Delay(delay_ms);
+      case 0:
+        /* 仅 LED1 亮 */
+        HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
+        break;
 
-      /* LED1灭，LED2亮，LED3灭 */
-      HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
-      HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
-      HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
-      HAL_Delay(delay_ms);
+      case 1:
+        /* 仅 LED2 亮 */
+        HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
+        break;
 
-      /* LED1灭，LED2灭，LED3亮 */
-      HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
-      HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
-      HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
-      HAL_Delay(delay_ms);
+      case 2:
+        /* 仅 LED3 亮 */
+        HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
+        break;
     }
     /* USER CODE BEGIN 3 */
 

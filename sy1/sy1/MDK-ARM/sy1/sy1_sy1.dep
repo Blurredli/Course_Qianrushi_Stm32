@@ -1,6 +1,6 @@
 Dependencies for Project 'sy1', Target 'sy1': (DO NOT MODIFY !)
 F (startup_stm32f103xe.s)(0x6A1C36C2)(--cpu Cortex-M3 -g --apcs=interwork -I.\RTE\_sy1-ID:\keil5\ARM\PACK\ARM\CMSIS\5.8.0\CMSIS\Core\Include-ID:\keil5\ARM\PACK\Keil\STM32F1xx_DFP\1.0.2\Device\Include--pd "__UVISION_VERSION SETA 524" --pd "_RTE_ SETA 1" --pd "STM32F10X_HD SETA 1"--list startup_stm32f103xe.lst --xref -o sy1\startup_stm32f103xe.o --depend sy1\startup_stm32f103xe.d)
-F (../Core/Src/main.c)(0x6A1C37A6)(--c99 -c --cpu Cortex-M3 -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32F1xx_HAL_Driver/Inc -I ../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_sy1-ID:\keil5\ARM\PACK\ARM\CMSIS\5.8.0\CMSIS\Core\Include-ID:\keil5\ARM\PACK\Keil\STM32F1xx_DFP\1.0.2\Device\Include-D__UVISION_VERSION="524" -D_RTE_ -DSTM32F10X_HD -DUSE_HAL_DRIVER -DSTM32F103xE-o sy1\main.o --omf_browse sy1\main.crf --depend sy1\main.d)
+F (../Core/Src/main.c)(0x6A1C464C)(--c99 -c --cpu Cortex-M3 -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32F1xx_HAL_Driver/Inc -I ../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_sy1-ID:\keil5\ARM\PACK\ARM\CMSIS\5.8.0\CMSIS\Core\Include-ID:\keil5\ARM\PACK\Keil\STM32F1xx_DFP\1.0.2\Device\Include-D__UVISION_VERSION="524" -D_RTE_ -DSTM32F10X_HD -DUSE_HAL_DRIVER -DSTM32F103xE-o sy1\main.o --omf_browse sy1\main.crf --depend sy1\main.d)
 I (../Core/Inc/main.h)(0x6A1C3277)
 I (../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h)(0x6A1C1F9A)
 I (../Core/Inc/stm32f1xx_hal_conf.h)(0x6A1C2732)
@@ -88,7 +88,7 @@ I (../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash.h)(0x6A1C1F9A)
 I (../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash_ex.h)(0x6A1C1F9A)
 I (../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h)(0x6A1C1F9A)
 I (../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h)(0x6A1C1F9A)
-F (../Core/Src/stm32f1xx_it.c)(0x6A1C3265)(--c99 -c --cpu Cortex-M3 -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32F1xx_HAL_Driver/Inc -I ../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_sy1-ID:\keil5\ARM\PACK\ARM\CMSIS\5.8.0\CMSIS\Core\Include-ID:\keil5\ARM\PACK\Keil\STM32F1xx_DFP\1.0.2\Device\Include-D__UVISION_VERSION="524" -D_RTE_ -DSTM32F10X_HD -DUSE_HAL_DRIVER -DSTM32F103xE-o sy1\stm32f1xx_it.o --omf_browse sy1\stm32f1xx_it.crf --depend sy1\stm32f1xx_it.d)
+F (../Core/Src/stm32f1xx_it.c)(0x6A1C4606)(--c99 -c --cpu Cortex-M3 -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32F1xx_HAL_Driver/Inc -I ../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F1xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_sy1-ID:\keil5\ARM\PACK\ARM\CMSIS\5.8.0\CMSIS\Core\Include-ID:\keil5\ARM\PACK\Keil\STM32F1xx_DFP\1.0.2\Device\Include-D__UVISION_VERSION="524" -D_RTE_ -DSTM32F10X_HD -DUSE_HAL_DRIVER -DSTM32F103xE-o sy1\stm32f1xx_it.o --omf_browse sy1\stm32f1xx_it.crf --depend sy1\stm32f1xx_it.d)
 I (../Core/Inc/main.h)(0x6A1C3277)
 I (../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h)(0x6A1C1F9A)
 I (../Core/Inc/stm32f1xx_hal_conf.h)(0x6A1C2732)
