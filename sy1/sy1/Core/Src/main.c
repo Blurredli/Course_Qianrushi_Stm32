@@ -25,6 +25,7 @@
 /* USER CODE BEGIN Includes */
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -76,8 +77,12 @@ void SystemClock_Config(void);
 uint8_t current_step = 0;  /* 当前步骤索引 */
 int8_t direction = 1;      /* 方向：1为正向，-1为反向 */
 uint32_t delay_ms = 500;   /* 延时时间，单位毫秒 */
-// 串口接收缓冲区
-uint8_t rx_data[2];
+
+/* 串口接收相关 */
+uint8_t rx_byte;           /* 单字节接收缓冲区 */
+char rx_buf[8];            /* 数字缓冲区 */
+uint8_t rx_index = 0;      /* 缓冲区索引 */
+uint8_t rx_state = 0;      /* 接收状态：0=等待'S', 1=接收数字 */
 
 /* USER CODE END 0 */
 
@@ -112,8 +117,7 @@ int main(void)
   MX_GPIO_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  // 开启串口中断接收
-  HAL_UART_Receive_IT(&huart1, rx_data, 1);
+  HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -183,7 +187,64 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+  if (huart->Instance == USART1)
+  {
+    if (rx_state == 0)
+    {
+      /* 等待接收 'S' */
+      if (rx_byte == 'S')
+      {
+        rx_state = 1;
+        rx_index = 0;
+        memset(rx_buf, 0, sizeof(rx_buf));
+      }
+    }
+    else if (rx_state == 1)
+    {
+      /* 接收数字，直到收到回车或换行 */
+      if (rx_byte == '\r' || rx_byte == '\n')
+      {
+        /* 解析数字 */
+        uint32_t ms = atoi(rx_buf);
+        if (ms >= 1 && ms <= 1000)
+        {
+          delay_ms = ms;
+          /* 计算并回传频率 (Hz) */
+          float freq = 1000.0f / delay_ms;
+          char msg[50];
+          sprintf(msg, "Freq: %.2f Hz\r\n", freq);
+          HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+        }
+        else
+        {
+          char msg[] = "Error: 1~1000 ms\r\n";
+          HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+        }
+        /* 重置状态 */
+        rx_state = 0;
+        rx_index = 0;
+      }
+      else if (rx_byte >= '0' && rx_byte <= '9')
+      {
+        /* 收到数字字符 */
+        if (rx_index < 7)
+        {
+          rx_buf[rx_index++] = rx_byte;
+        }
+      }
+      else
+      {
+        /* 无效字符，重置 */
+        rx_state = 0;
+        rx_index = 0;
+      }
+    }
+    /* 继续接收下一字节 */
+    HAL_UART_Receive_IT(&huart1, &rx_byte, 1);
+  }
+}
 /* USER CODE END 4 */
 
 /**

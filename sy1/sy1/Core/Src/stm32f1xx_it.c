@@ -22,8 +22,6 @@
 #include "stm32f1xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <string.h>
-#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -237,35 +235,4 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
    }
 }
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-    if (huart->Instance == USART1)
-    {
-        if (rx_data[0] == 'S')
-        {
-            HAL_UART_Receive_IT(&huart1, &rx_data[1], 1);
-        }
-        else if (rx_data[0] == '1' || rx_data[0] == '2' || rx_data[0] == '3')
-        {
-            switch (rx_data[0])
-            {
-                case '1': delay_ms = 1000; break;
-                case '2': delay_ms = 500; break;
-                case '3': delay_ms = 200; break;
-            }
-
-            char msg[50];
-            sprintf(msg, "Speed set: %lu Hz\r\n", 1000 / delay_ms);
-            HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
-
-            rx_data[0] = 0;
-            rx_data[1] = 0;
-            HAL_UART_Receive_IT(&huart1, rx_data, 1);
-        }
-        else
-        {
-            HAL_UART_Receive_IT(&huart1, rx_data, 1);
-        }
-    }
-}
 /* USER CODE END 1 */
