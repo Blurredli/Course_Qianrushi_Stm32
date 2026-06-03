@@ -35,13 +35,14 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define NOTIF_KEY1    1   /* 切换流水方向 */
-#define NOTIF_KEY2    2   /* 增加流水速率 */
-#define NOTIF_KEY3    3   /* 暂停/恢复 */
+/* 按键事件标志位定义，用于 osThreadFlagsSet / osThreadFlagsWait */
+#define EVT_KEY1    (1U << 0)  /* KEY1: 切换流水方向 */
+#define EVT_KEY2    (1U << 1)  /* KEY2: 增加流水速率 */
+#define EVT_KEY3    (1U << 2)  /* KEY3: 暂停/恢复 */
 
-#define DELAY_INIT    1000  /* 初始延时 1000ms = 1Hz */
-#define DELAY_STEP    200   /* 每次按键减少 200ms */
-#define DELAY_MIN     100   /* 最小延时 100ms = 10Hz */
+#define DELAY_INIT  1000  /* 初始延时 1000ms = 1Hz */
+#define DELAY_STEP  200   /* 每次按键减少 200ms */
+#define DELAY_MIN   100   /* 最小延时 100ms = 10Hz */
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -105,10 +106,7 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of KeyTask */
   KeyTaskHandle = osThreadNew(StartKeyTask, NULL, &KeyTask_attributes);
-
-  /* creation of LEDTask */
   LEDTaskHandle = osThreadNew(StartLEDTask, NULL, &LEDTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
@@ -124,7 +122,7 @@ void MX_FREERTOS_Init(void) {
 /* USER CODE BEGIN Header_StartKeyTask */
 /**
 * @brief Function implementing the KeyTask thread.
-*        轮询 KEY1/KEY2/KEY3，按下时通过任务通知发送给 LEDTask
+*        轮询 KEY1/KEY2/KEY3，按下时通过 osThreadFlagsSet 通知 LEDTask
 * @param argument: Not used
 * @retval None
 */
@@ -138,29 +136,24 @@ void StartKeyTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    /* 读取按键状态 (低电平有效) */
+    /* 读取按键状态（低电平有效，未按下时为高） */
     key1_cur = HAL_GPIO_ReadPin(Key1_GPIO_Port, Key1_Pin);
     key2_cur = HAL_GPIO_ReadPin(Key2_GPIO_Port, Key2_Pin);
     key3_cur = HAL_GPIO_ReadPin(Key3_GPIO_Port, Key3_Pin);
 
-    /* KEY1 下降沿检测 */
+    /* KEY1 下降沿检测：从高变低说明按下 */
     if (key1_prev == 1 && key1_cur == 0)
-    {
-      xTaskNotify(LEDTaskHandle, NOTIF_KEY1, eSetValueWithOverwrite);
-    }
+      osThreadFlagsSet(LEDTaskHandle, EVT_KEY1);
 
     /* KEY2 下降沿检测 */
     if (key2_prev == 1 && key2_cur == 0)
-    {
-      xTaskNotify(LEDTaskHandle, NOTIF_KEY2, eSetValueWithOverwrite);
-    }
+      osThreadFlagsSet(LEDTaskHandle, EVT_KEY2);
 
     /* KEY3 下降沿检测 */
     if (key3_prev == 1 && key3_cur == 0)
-    {
-      xTaskNotify(LEDTaskHandle, NOTIF_KEY3, eSetValueWithOverwrite);
-    }
+      osThreadFlagsSet(LEDTaskHandle, EVT_KEY3);
 
+    /* 保存当前按键状态，供下一轮比较 */
     key1_prev = key1_cur;
     key2_prev = key2_cur;
     key3_prev = key3_cur;
@@ -173,7 +166,7 @@ void StartKeyTask(void *argument)
 /* USER CODE BEGIN Header_StartLEDTask */
 /**
 * @brief Function implementing the LEDTask thread.
-*        接收任务通知控制流水灯：方向/速率/暂停
+*        接收事件标志控制流水灯：方向/速率/暂停
 * @param argument: Not used
 * @retval None
 */
@@ -181,7 +174,7 @@ void StartKeyTask(void *argument)
 void StartLEDTask(void *argument)
 {
   /* USER CODE BEGIN StartLEDTask */
-  uint32_t notify_val;
+  uint32_t flags;
   uint32_t delay_ms = DELAY_INIT;
   int8_t direction = 1;   /* 1=正向(LED1->LED2->LED3), -1=反向 */
   int8_t running = 1;     /* 1=运行, 0=暂停 */
@@ -200,54 +193,52 @@ void StartLEDTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    /* 非阻塞等待通知，超时时间为当前延时 */
-    if (xTaskNotifyWait(0, 0xFFFFFFFF, &notify_val, pdMS_TO_TICKS(delay_ms)) == pdTRUE)
+    /* 等待事件标志：任意事件（EVT_KEY1|EVT_KEY2|EVT_KEY3）
+       或超时（延时时间到）后返回。osFlagsWaitAny 等价于 xTaskNotifyWait
+       的"等待任意通知"，osWaitForever 对应 portMAX_DELAY
+       超时值为当前流水延时，超时返回0说明无按键，继续步进 */
+    flags = osThreadFlagsWait(EVT_KEY1 | EVT_KEY2 | EVT_KEY3,
+                              osFlagsWaitAny,
+                              pdMS_TO_TICKS(delay_ms));
+
+    if (flags > 0x80000000U)  /* 错误或超时，flags 最高位为1 */
     {
-      switch (notify_val)
-      {
-        case NOTIF_KEY1:  /* 切换方向 */
-          direction = -direction;
-          break;
-
-        case NOTIF_KEY2:  /* 增加速率 */
-          delay_ms -= DELAY_STEP;
-          if (delay_ms < DELAY_MIN)
-          {
-            delay_ms = DELAY_INIT;  /* 超过阈值回到初始速率 */
-          }
-          break;
-
-        case NOTIF_KEY3:  /* 暂停/恢复 */
-          running = !running;
-          break;
-      }
-    }
-
-    /* 暂停时跳过LED操作，但继续等待通知 */
-    if (!running)
-    {
-      continue;
-    }
-
-    /* 关闭所有LED */
-    for (int i = 0; i < 3; i++)
-    {
-      HAL_GPIO_WritePin(leds[i].port, leds[i].pin, GPIO_PIN_RESET);
-    }
-
-    /* 点亮当前步骤的LED */
-    if (direction == 1)
-    {
-      /* 正向: LED1 -> LED2 -> LED3 */
-      HAL_GPIO_WritePin(leds[step].port, leds[step].pin, GPIO_PIN_SET);
+      /* 超时：无按键按下，继续下一步LED切换 */
     }
     else
     {
-      /* 反向: LED3 -> LED2 -> LED1 */
-      HAL_GPIO_WritePin(leds[2 - step].port, leds[2 - step].pin, GPIO_PIN_SET);
+      /* 收到事件标志，处理对应按键 */
+      if (flags & EVT_KEY1)  /* 切换方向 */
+      {
+        direction = -direction;
+      }
+      if (flags & EVT_KEY2)  /* 增加速率 */
+      {
+        delay_ms -= DELAY_STEP;
+        if (delay_ms < DELAY_MIN)
+          delay_ms = DELAY_INIT;  /* 超过阈值回到初始速率 */
+      }
+      if (flags & EVT_KEY3)  /* 暂停/恢复 */
+      {
+        running = !running;
+      }
     }
 
-    /* 步进 */
+    /* 暂停时跳过LED操作，但继续循环等待通知 */
+    if (!running)
+      continue;
+
+    /* 关闭所有LED */
+    for (int i = 0; i < 3; i++)
+      HAL_GPIO_WritePin(leds[i].port, leds[i].pin, GPIO_PIN_RESET);
+
+    /* 点亮当前步骤的LED（正向取 step，反向取 2-step） */
+    if (direction == 1)
+      HAL_GPIO_WritePin(leds[step].port, leds[step].pin, GPIO_PIN_SET);
+    else
+      HAL_GPIO_WritePin(leds[2 - step].port, leds[2 - step].pin, GPIO_PIN_SET);
+
+    /* 步进到下一个LED */
     step = (step + 1) % 3;
   }
   /* USER CODE END StartLEDTask */

@@ -37,13 +37,17 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define NOTIF_KEY1    1   /* 切换流水方向 */
-#define NOTIF_KEY2    2   /* 增加流水速率 */
-#define NOTIF_KEY3    3   /* 暂停/恢复 */
+/* 按键事件标志位定义 */
+#define EVT_KEY1    (1U << 0)  /* KEY1: 切换流水方向 */
+#define EVT_KEY2    (1U << 1)  /* KEY2: 增加流水速率 */
+#define EVT_KEY3    (1U << 2)  /* KEY3: 暂停/恢复 */
 
-#define DELAY_INIT    1000  /* 初始延时 1000ms = 1Hz */
-#define DELAY_STEP    200   /* 每次按键减少 200ms */
-#define DELAY_MIN     100   /* 最小延时 100ms = 10Hz */
+/* UART 状态更新事件标志（LEDTask 通知 UartTask） */
+#define EVT_UART_UPD (1U << 0)
+
+#define DELAY_INIT  1000  /* 初始延时 1000ms = 1Hz */
+#define DELAY_STEP  200   /* 每次按键减少 200ms */
+#define DELAY_MIN   100   /* 最小延时 100ms = 10Hz */
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -118,13 +122,8 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of KeyTask */
-  KeyTaskHandle = osThreadNew(StartKeyTask, NULL, &KeyTask_attributes);
-
-  /* creation of LEDTask */
-  LEDTaskHandle = osThreadNew(StartLEDTask, NULL, &LEDTask_attributes);
-
-  /* creation of UartTask */
+  KeyTaskHandle  = osThreadNew(StartKeyTask,  NULL, &KeyTask_attributes);
+  LEDTaskHandle  = osThreadNew(StartLEDTask,  NULL, &LEDTask_attributes);
   UartTaskHandle = osThreadNew(StartUartTask, NULL, &UartTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
@@ -140,7 +139,7 @@ void MX_FREERTOS_Init(void) {
 /* USER CODE BEGIN Header_StartKeyTask */
 /**
 * @brief Function implementing the KeyTask thread.
-*        轮询 KEY1/KEY2/KEY3，按下时通过任务通知发送给 LEDTask
+*        轮询 KEY1/KEY2/KEY3，按下时通过 osThreadFlagsSet 通知 LEDTask
 * @param argument: Not used
 * @retval None
 */
@@ -154,24 +153,29 @@ void StartKeyTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
+    /* 读取按键状态（低电平有效，未按下时为高） */
     key1_cur = HAL_GPIO_ReadPin(Key1_GPIO_Port, Key1_Pin);
     key2_cur = HAL_GPIO_ReadPin(Key2_GPIO_Port, Key2_Pin);
     key3_cur = HAL_GPIO_ReadPin(Key3_GPIO_Port, Key3_Pin);
 
+    /* KEY1 下降沿检测：从高变低说明按下 */
     if (key1_prev == 1 && key1_cur == 0)
-      xTaskNotify(LEDTaskHandle, NOTIF_KEY1, eSetValueWithOverwrite);
+      osThreadFlagsSet(LEDTaskHandle, EVT_KEY1);
 
+    /* KEY2 下降沿检测 */
     if (key2_prev == 1 && key2_cur == 0)
-      xTaskNotify(LEDTaskHandle, NOTIF_KEY2, eSetValueWithOverwrite);
+      osThreadFlagsSet(LEDTaskHandle, EVT_KEY2);
 
+    /* KEY3 下降沿检测 */
     if (key3_prev == 1 && key3_cur == 0)
-      xTaskNotify(LEDTaskHandle, NOTIF_KEY3, eSetValueWithOverwrite);
+      osThreadFlagsSet(LEDTaskHandle, EVT_KEY3);
 
+    /* 保存当前按键状态，供下一轮比较 */
     key1_prev = key1_cur;
     key2_prev = key2_cur;
     key3_prev = key3_cur;
 
-    osDelay(20);
+    osDelay(20);  /* 20ms 消抖周期 */
   }
   /* USER CODE END StartKeyTask */
 }
@@ -179,7 +183,7 @@ void StartKeyTask(void *argument)
 /* USER CODE BEGIN Header_StartLEDTask */
 /**
 * @brief Function implementing the LEDTask thread.
-*        接收任务通知控制流水灯，状态变化时通知 UartTask
+*        接收事件标志控制流水灯，状态变化时通知 UartTask
 * @param argument: Not used
 * @retval None
 */
@@ -187,9 +191,10 @@ void StartKeyTask(void *argument)
 void StartLEDTask(void *argument)
 {
   /* USER CODE BEGIN StartLEDTask */
-  uint32_t notify_val;
+  uint32_t flags;
   uint8_t step = 0;
 
+  /* 流水灯 GPIO 引脚表 */
   const struct {
     GPIO_TypeDef *port;
     uint16_t pin;
@@ -202,34 +207,38 @@ void StartLEDTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    if (xTaskNotifyWait(0, 0xFFFFFFFF, &notify_val, pdMS_TO_TICKS(g_delay_ms)) == pdTRUE)
+    /* 等待事件标志：任意按键事件 或 当前延时超时
+       返回值高位为1表示超时/错误，否则返回的是置位的标志位 */
+    flags = osThreadFlagsWait(EVT_KEY1 | EVT_KEY2 | EVT_KEY3,
+                              osFlagsWaitAny,
+                              pdMS_TO_TICKS(g_delay_ms));
+
+    if (!(flags > 0x80000000U))  /* 收到有效事件 */
     {
-      switch (notify_val)
+      if (flags & EVT_KEY1)
       {
-        case NOTIF_KEY1:
-          g_direction = -g_direction;
-          xTaskNotify(UartTaskHandle, 0, eNoAction);
-          break;
+        g_direction = -g_direction;         /* 切换方向 */
+        osThreadFlagsSet(UartTaskHandle, EVT_UART_UPD);  /* 通知 UartTask */
+      }
 
-        case NOTIF_KEY2:
-        {
-          uint32_t old_delay = g_delay_ms;
-          g_delay_ms -= DELAY_STEP;
-          if (g_delay_ms < DELAY_MIN)
-            g_delay_ms = DELAY_INIT;
-          /* 速率变化时通知 UartTask（排除初始恢复的情况） */
-          if (old_delay != g_delay_ms)
-            xTaskNotify(UartTaskHandle, 0, eNoAction);
-          break;
-        }
+      if (flags & EVT_KEY2)
+      {
+        uint32_t old_delay = g_delay_ms;
+        g_delay_ms -= DELAY_STEP;           /* 增加速率（减小延时） */
+        if (g_delay_ms < DELAY_MIN)
+          g_delay_ms = DELAY_INIT;          /* 超过阈值回到初始速率 */
+        if (old_delay != g_delay_ms)        /* 延时确实变化才通知 */
+          osThreadFlagsSet(UartTaskHandle, EVT_UART_UPD);
+      }
 
-        case NOTIF_KEY3:
-          g_running = !g_running;
-          xTaskNotify(UartTaskHandle, 0, eNoAction);
-          break;
+      if (flags & EVT_KEY3)
+      {
+        g_running = !g_running;             /* 暂停/恢复切换 */
+        osThreadFlagsSet(UartTaskHandle, EVT_UART_UPD);
       }
     }
 
+    /* 暂停时跳过LED操作，继续等待下一次事件 */
     if (!g_running)
       continue;
 
@@ -237,12 +246,13 @@ void StartLEDTask(void *argument)
     for (int i = 0; i < 3; i++)
       HAL_GPIO_WritePin(leds[i].port, leds[i].pin, GPIO_PIN_RESET);
 
-    /* 点亮当前步骤的LED */
+    /* 点亮当前步骤的LED（正向取 step，反向取 2-step） */
     if (g_direction == 1)
       HAL_GPIO_WritePin(leds[step].port, leds[step].pin, GPIO_PIN_SET);
     else
       HAL_GPIO_WritePin(leds[2 - step].port, leds[2 - step].pin, GPIO_PIN_SET);
 
+    /* 步进到下一个LED */
     step = (step + 1) % 3;
   }
   /* USER CODE END StartLEDTask */
@@ -251,7 +261,7 @@ void StartLEDTask(void *argument)
 /* USER CODE BEGIN Header_StartUartTask */
 /**
 * @brief Function implementing the UartTask thread.
-*        收到通知后通过串口发送当前流水灯状态
+*        收到事件标志后通过串口发送当前流水灯状态
 * @param argument: Not used
 * @retval None
 */
@@ -262,9 +272,10 @@ void StartUartTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    /* 等待 LEDTask 的状态变化通知 */
-    xTaskNotifyWait(0, 0xFFFFFFFF, NULL, portMAX_DELAY);
+    /* 等待 LEDTask 发来的状态更新通知，永久等待 */
+    osThreadFlagsWait(EVT_UART_UPD, osFlagsWaitAny, osWaitForever);
 
+    /* 根据全局状态变量发送对应的中文提示 */
     if (!g_running)
     {
       char msg[] = "已暂停\r\n";
