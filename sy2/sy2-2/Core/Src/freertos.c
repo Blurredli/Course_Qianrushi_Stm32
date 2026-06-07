@@ -166,7 +166,9 @@ void StartKeyTask(void *argument)
 /* USER CODE BEGIN Header_StartLEDTask */
 /**
 * @brief Function implementing the LEDTask thread.
-*        接收事件标志控制流水灯：方向/速率/暂停
+*        接收事件标志控制流水灯
+*        KEY1/KEY2 按下后延迟到当前步完成后才生效，防止LED脉冲波形
+*        KEY3 暂停立即生效
 * @param argument: Not used
 * @retval None
 */
@@ -179,6 +181,10 @@ void StartLEDTask(void *argument)
   int8_t direction = 1;   /* 1=正向(LED1->LED2->LED3), -1=反向 */
   int8_t running = 1;     /* 1=运行, 0=暂停 */
   uint8_t step = 0;       /* 当前流水步骤 0~2 */
+
+  /* 待生效标志：KEY1/KEY2 按下后先标记，等当前步完成后才真正应用 */
+  uint8_t pend_dir  = 0;  /* 1=有方向切换待生效 */
+  uint8_t pend_speed = 0; /* 1=有速率变化待生效 */
 
   /* 流水灯 GPIO 引脚表 */
   const struct {
@@ -193,40 +199,34 @@ void StartLEDTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    /* 等待事件标志：任意事件（EVT_KEY1|EVT_KEY2|EVT_KEY3）
-       或超时（延时时间到）后返回。osFlagsWaitAny 等价于 xTaskNotifyWait
-       的"等待任意通知"，osWaitForever 对应 portMAX_DELAY
-       超时值为当前流水延时，超时返回0说明无按键，继续步进 */
+    /* 等待事件标志：任意按键事件 或 当前延时超时
+       超时值为当前流水延时，超时返回高位为1说明无按键，继续步进 */
     flags = osThreadFlagsWait(EVT_KEY1 | EVT_KEY2 | EVT_KEY3,
                               osFlagsWaitAny,
                               pdMS_TO_TICKS(delay_ms));
 
-    if (flags > 0x80000000U)  /* 错误或超时，flags 最高位为1 */
+    if (!(flags > 0x80000000U))  /* 收到有效按键事件 */
     {
-      /* 超时：无按键按下，继续下一步LED切换 */
-    }
-    else
-    {
-      /* 收到事件标志，处理对应按键 */
-      if (flags & EVT_KEY1)  /* 切换方向 */
+      if (flags & EVT_KEY3)
       {
-        direction = -direction;
-      }
-      if (flags & EVT_KEY2)  /* 增加速率 */
-      {
-        delay_ms -= DELAY_STEP;
-        if (delay_ms < DELAY_MIN)
-          delay_ms = DELAY_INIT;  /* 超过阈值回到初始速率 */
-      }
-      if (flags & EVT_KEY3)  /* 暂停/恢复 */
-      {
+        /* KEY3 暂停/恢复：立即生效，无需等待 */
         running = !running;
+      }
+
+      if (flags & EVT_KEY1)
+      {
+        /* KEY1 切换方向：标记待生效，等当前步完成后再切换 */
+        pend_dir = 1;
+      }
+
+      if (flags & EVT_KEY2)
+      {
+        /* KEY2 增加速率：标记待生效，等当前步完成后再切换 */
+        pend_speed = 1;
       }
     }
 
-    /* 暂停时跳过LED操作，但继续循环等待通知 */
-    if (!running)
-      continue;
+    /* ---- 当前步：点亮LED（确保至少亮一个完整周期） ---- */
 
     /* 关闭所有LED */
     for (int i = 0; i < 3; i++)
@@ -237,6 +237,35 @@ void StartLEDTask(void *argument)
       HAL_GPIO_WritePin(leds[step].port, leds[step].pin, GPIO_PIN_SET);
     else
       HAL_GPIO_WritePin(leds[2 - step].port, leds[2 - step].pin, GPIO_PIN_SET);
+
+    /* 等待当前LED亮完这一个周期 */
+    osDelay(delay_ms);
+
+    /* 关闭LED，完成一个完整的亮灭周期 */
+    for (int i = 0; i < 3; i++)
+      HAL_GPIO_WritePin(leds[i].port, leds[i].pin, GPIO_PIN_RESET);
+
+    /* ---- 当前步完成，现在才应用待生效的状态变化 ---- */
+
+    /* 暂停检查：如果在等待期间按了KEY3，直接跳过步进 */
+    if (!running)
+      continue;
+
+    /* 应用方向切换 */
+    if (pend_dir)
+    {
+      direction = -direction;
+      pend_dir = 0;
+    }
+
+    /* 应用速率变化 */
+    if (pend_speed)
+    {
+      delay_ms -= DELAY_STEP;
+      if (delay_ms < DELAY_MIN)
+        delay_ms = DELAY_INIT;  /* 超过阈值回到初始速率 */
+      pend_speed = 0;
+    }
 
     /* 步进到下一个LED */
     step = (step + 1) % 3;
