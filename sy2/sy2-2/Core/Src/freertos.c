@@ -40,9 +40,9 @@
 #define EVT_KEY2    (1U << 1)  /* KEY2: 增加流水速率 */
 #define EVT_KEY3    (1U << 2)  /* KEY3: 暂停/恢复 */
 
-#define DELAY_INIT  500   /* 初始延时 500ms = 2Hz，方便仿真观察 */
-#define DELAY_STEP  100   /* 每次按键减少 100ms */
-#define DELAY_MIN   100   /* 最小延时 100ms = 10Hz */
+#define DELAY_INIT  250   /* 初始延时 500ms = 2Hz，方便仿真观察 */
+#define DELAY_STEP  50   /* 每次按键减少 100ms */
+#define DELAY_MIN   50   /* 最小延时 100ms = 10Hz */
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
