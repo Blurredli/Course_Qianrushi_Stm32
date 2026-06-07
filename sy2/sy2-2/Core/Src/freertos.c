@@ -197,11 +197,14 @@ void StartLEDTask(void *argument)
     {LED3_GPIO_Port, LED3_Pin},  /* LED3: PD3 */
   };
 
+  /* 上电先点亮第一个LED */
+  HAL_GPIO_WritePin(leds[direction == 1 ? step : (2 - step)].port,
+                    leds[direction == 1 ? step : (2 - step)].pin, GPIO_PIN_SET);
+
   /* Infinite loop */
   for(;;)
   {
-    /* 等待事件标志：任意按键事件 或 当前延时超时
-       超时值为当前流水延时，超时返回高位为1说明无按键，继续步进 */
+    /* 等待事件标志：任意按键事件 或 当前延时超时 */
     flags = osThreadFlagsWait(EVT_KEY1 | EVT_KEY2 | EVT_KEY3,
                               osFlagsWaitAny,
                               pdMS_TO_TICKS(delay_ms));
@@ -209,33 +212,24 @@ void StartLEDTask(void *argument)
     if (!(flags > 0x80000000U))  /* 收到有效按键事件 */
     {
       if (flags & EVT_KEY3)
-        running = !running;           /* KEY3 暂停/恢复：立即生效 */
+        running = !running;
 
       if (flags & EVT_KEY1)
-        pend_dir = 1;                /* KEY1 方向：标记待生效 */
+        pend_dir = 1;
 
       if (flags & EVT_KEY2)
-        pend_speed = 1;              /* KEY2 速率：标记待生效 */
+        pend_speed = 1;
     }
 
-    /* ---- 点亮当前步的LED ---- */
-    for (int i = 0; i < 3; i++)
-      HAL_GPIO_WritePin(leds[i].port, leds[i].pin, GPIO_PIN_RESET);
-
-    if (direction == 1)
-      HAL_GPIO_WritePin(leds[step].port, leds[step].pin, GPIO_PIN_SET);
-    else
-      HAL_GPIO_WritePin(leds[2 - step].port, leds[2 - step].pin, GPIO_PIN_SET);
-
-    /* ---- 亮半个周期，确保LED至少亮半周期 ---- */
+    /* ---- 亮完前半周期 ---- */
     half_ms = delay_ms / 2;
     if (half_ms < 1) half_ms = 1;
     osDelay(half_ms);
 
-    /* ---- 半周期到，应用待生效的状态变化 ---- */
     if (!running)
       continue;
 
+    /* 半周期到，应用待生效的状态变化 */
     if (pend_dir)
     {
       direction = -direction;
@@ -249,16 +243,23 @@ void StartLEDTask(void *argument)
       pend_speed = 0;
     }
 
-    /* ---- 亮完剩余半个周期 ---- */
+    /* ---- 亮完后半周期 ---- */
     half_ms = delay_ms / 2;
     if (half_ms < 1) half_ms = 1;
     osDelay(half_ms);
 
-    /* 关闭LED，完成一个完整周期，步进到下一个 */
-    for (int i = 0; i < 3; i++)
-      HAL_GPIO_WritePin(leds[i].port, leds[i].pin, GPIO_PIN_RESET);
+    /* ---- 当前灯灭，下一个灯立刻亮（无缝切换） ---- */
+    if (direction == 1)
+      HAL_GPIO_WritePin(leds[step].port, leds[step].pin, GPIO_PIN_RESET);
+    else
+      HAL_GPIO_WritePin(leds[2 - step].port, leds[2 - step].pin, GPIO_PIN_RESET);
 
     step = (step + 1) % 3;
+
+    if (direction == 1)
+      HAL_GPIO_WritePin(leds[step].port, leds[step].pin, GPIO_PIN_SET);
+    else
+      HAL_GPIO_WritePin(leds[2 - step].port, leds[2 - step].pin, GPIO_PIN_SET);
   }
   /* USER CODE END StartLEDTask */
 }
