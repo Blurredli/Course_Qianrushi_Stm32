@@ -2,3 +2,4 @@
 *.o
 *.d
 /sy2/sy2-3/Core/Src/.idea
+/exti/LED_KEY/MDK-ARM/.idea
