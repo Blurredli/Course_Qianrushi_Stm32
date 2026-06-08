@@ -179,6 +179,7 @@ void StartLEDTask(void *argument)
   int8_t direction = 1;   /* 1=正向(LED1->LED2->LED3), -1=反向 */
   int8_t running = 1;     /* 1=运行, 0=暂停 */
   uint8_t step = 0;       /* 当前流水步骤 0~2 */
+  int8_t current_led = -1; /* 当前点亮的 LED 索引，-1 表示初始状态 */
 
   /* 流水灯 GPIO 引脚表 */
   const struct {
@@ -228,15 +229,24 @@ void StartLEDTask(void *argument)
     if (!running)
       continue;
 
-    /* 关闭所有LED */
-    for (int i = 0; i < 3; i++)
-      HAL_GPIO_WritePin(leds[i].port, leds[i].pin, GPIO_PIN_RESET);
-
-    /* 点亮当前步骤的LED（正向取 step，反向取 2-step） */
+    /* 计算本次要点亮的 LED 编号 */
+    int8_t next_led;
     if (direction == 1)
-      HAL_GPIO_WritePin(leds[step].port, leds[step].pin, GPIO_PIN_SET);
+      next_led = step;
     else
-      HAL_GPIO_WritePin(leds[2 - step].port, leds[2 - step].pin, GPIO_PIN_SET);
+      next_led = 2 - step;
+
+    /* 如果目标 LED 和当前亮着的相同，就无需操作 */
+    if (next_led != current_led) {
+      /* 先关闭上一个 LED */
+      if (current_led >= 0)
+        HAL_GPIO_WritePin(leds[current_led].port, leds[current_led].pin, GPIO_PIN_RESET);
+
+      /* 再打开本次要点亮的 LED */
+      HAL_GPIO_WritePin(leds[next_led].port, leds[next_led].pin, GPIO_PIN_SET);
+
+      current_led = next_led;
+    }
 
     /* 步进到下一个LED */
     step = (step + 1) % 3;

@@ -66,7 +66,7 @@ osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for UartTask */
 osThreadId_t UartTaskHandle;
@@ -244,8 +244,8 @@ void StartLED1Task(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    /* 计算延时时间 */
-    delay_ms = (uint32_t)(1000.0f / led1_freq);
+    /* 计算半周期延时时间（亮和灭各占一半周期） */
+    delay_ms = (uint32_t)(500.0f / led1_freq);
 
     /* LED1闪烁 */
     HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
@@ -271,8 +271,8 @@ void StartLED2Task(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    /* 计算延时时间 */
-    delay_ms = (uint32_t)(1000.0f / led2_freq);
+    /* 计算半周期延时时间（亮和灭各占一半周期） */
+    delay_ms = (uint32_t)(500.0f / led2_freq);
 
     /* LED2闪烁 */
     HAL_GPIO_WritePin(GPIOD, LED2_Pin, GPIO_PIN_SET);
@@ -298,8 +298,8 @@ void StartLED3Task(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    /* 计算延时时间 */
-    delay_ms = (uint32_t)(1000.0f / led3_freq);
+    /* 计算半周期延时时间（亮和灭各占一半周期） */
+    delay_ms = (uint32_t)(500.0f / led3_freq);
 
     /* LED3闪烁 */
     HAL_GPIO_WritePin(GPIOD, LED3_Pin, GPIO_PIN_SET);
