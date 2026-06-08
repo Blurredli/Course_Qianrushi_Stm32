@@ -1,3 +1,4 @@
 *.sct
 *.o
 *.d
+/sy2/sy2-3/Core/Src/.idea
