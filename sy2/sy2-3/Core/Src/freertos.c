@@ -45,9 +45,9 @@
 /* UART 状态更新事件标志（LEDTask 通知 UartTask） */
 #define EVT_UART_UPD (1U << 0)
 
-#define DELAY_INIT  1000  /* 初始延时 1000ms = 1Hz */
-#define DELAY_STEP  200   /* 每次按键减少 200ms */
-#define DELAY_MIN   100   /* 最小延时 100ms = 10Hz */
+#define DELAY_INIT  100  /* 初始延时 100ms = 10Hz */
+#define DELAY_STEP  40   /* 每次按键减少 40ms */
+#define DELAY_MIN   20   /* 最小延时 20ms */
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
